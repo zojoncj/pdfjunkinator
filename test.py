@@ -8,6 +8,8 @@ import socket
 #to hold all of our cidrs
 cidrs = {}
 
+pulldns = True
+
 
 #look up ip in cidrs to determine vrf
 def iptovrf(ip):
@@ -81,15 +83,18 @@ with open('ip_to_hostname.csv', newline='') as csvfile:
     csvreader = csv.reader(csvfile, delimiter=',', quotechar='"')
     headers = next(csvreader)
     headers.append('VRF')
-    headers.append('Hostname')
+    if(pulldns):
+        headers.append('Hostname')
     csvout.writerow(headers)
     for row in csvreader:
         ip = row[1]
-        hostname = ''
-        try:
-            hostname = (socket.gethostbyaddr(ip))[0]
-        except:
-            hostname = 'NotFound'
+        if(pulldns):
+            hostname = ''
+            try:
+                hostname = (socket.gethostbyaddr(ip))[0]
+            except:
+                hostname = 'NotFound'
         row.append(iptovrf(ip))
-        row.append(hostname)
+        if(pulldns):
+            row.append(hostname)
         csvout.writerow(row)
