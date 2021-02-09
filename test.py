@@ -2,7 +2,9 @@ from pprint import pprint
 import PyPDF2
 import ipaddress
 import csv
+import re
 
+#to hold all of our cidrs
 cidrs = {}
 
 def iptovrf(ip):
@@ -18,34 +20,46 @@ pdfFileObj = open('VRF-info-ALL.pdf', 'rb')
 pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
 
 pages = pdfReader.getNumPages()
-#to hold all of our cidrs
+
+good = re.compile("^([a-zA-z0-9-])+:.*")
+
+debug = open('debug.txt','w',newline='\n')
 
 #cause you never not start at 0 for an incrementer
 i = 0
 #iterate over the PDF and create a "dictionary" mapping subnet to vrfname
+getnets = False
+vrfname = ''
 for i in range(pages):
     pageObj = pdfReader.getPage(i)
     pagetxt = (pageObj.extractText()).split('\n')
-    vrfname = pagetxt[1]
-    getnets = False
+    if( not getnets):
+        vrfname = pagetxt[1]
+
     for line in pagetxt:
-        if(getnets and line.startswith('Page')):
+        if( (line.startswith('--') or line.startswith("        CUSTOM") or line.startswith('Page') or line == '')):
+            debug.write("Cont: %s\n" %line)
+            continue
+        elif(getnets and not good.match(line)):
+            debug.write("False %s\n" %line)
+            vrfname = pagetxt[1]
             getnets = False
-        if(getnets and not line.startswith('-')):
+        elif(getnets and good.match(line)):
+            debug.write("Cidr: %s\n" %line)
             cidr = (line.split(' '))[2]
             cidrs[cidr] = vrfname
-        if(line == 'Router SVIs Found:'):
+        elif(line == 'Router SVIs Found:'):
+            debug.write("True %s\n" %line)
             getnets = True
-
+        else:
+            debug.write("Other %s\n" %line)
+debug.close()
 
 pdfFileObj.close()
 ccsvo = open('cidrs.csv','w', newline='\n')
 for k in cidrs:
     ccsvo.write(k+','+cidrs[k]+"\n")
 ccsvo.close()
-
-
-
 
 #cause I'm lazy and don't want to find why we have a subnet that matches the empty string
 cidrs.pop('', None)
