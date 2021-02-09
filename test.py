@@ -79,6 +79,7 @@ cidrs.pop('', None)
 csvo = open('outfile.csv','w', newline='\n')
 csvout = csv.writer(csvo,delimiter=",",quotechar='"',quoting=csv.QUOTE_MINIMAL)
 
+#copy file with ip's in it into this directory and update filename below to match
 with open('ip_to_hostname.csv', newline='') as csvfile:
     csvreader = csv.reader(csvfile, delimiter=',', quotechar='"')
     headers = next(csvreader)
@@ -87,6 +88,7 @@ with open('ip_to_hostname.csv', newline='') as csvfile:
         headers.append('Hostname')
     csvout.writerow(headers)
     for row in csvreader:
+        #update the number below to match the column the IP is in, rembmer counting starts at 0!
         ip = row[1]
         if(pulldns):
             hostname = ''
