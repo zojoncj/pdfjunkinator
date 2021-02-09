@@ -3,10 +3,13 @@ import PyPDF2
 import ipaddress
 import csv
 import re
+import socket
 
 #to hold all of our cidrs
 cidrs = {}
 
+
+#look up ip in cidrs to determine vrf
 def iptovrf(ip):
     retval = 'NotFound'
     for cidr in cidrs:
@@ -21,15 +24,19 @@ pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
 
 pages = pdfReader.getNumPages()
 
+#regex to match on "good" lines
 good = re.compile("^([a-zA-z0-9-])+:.*")
 
+#file to write debug info to
 debug = open('debug.txt','w',newline='\n')
 
 #cause you never not start at 0 for an incrementer
 i = 0
-#iterate over the PDF and create a "dictionary" mapping subnet to vrfname
+
+#some intial values for vars that we need to span iteterations of the below for loop
 getnets = False
 vrfname = ''
+#iterate over the PDF and create a "dictionary" mapping subnet to vrfname
 for i in range(pages):
     pageObj = pdfReader.getPage(i)
     pagetxt = (pageObj.extractText()).split('\n')
@@ -53,8 +60,11 @@ for i in range(pages):
             getnets = True
         else:
             debug.write("Other %s\n" %line)
+
+#close debug file
 debug.close()
 
+#close the pdf
 pdfFileObj.close()
 ccsvo = open('cidrs.csv','w', newline='\n')
 for k in cidrs:
@@ -71,8 +81,15 @@ with open('ip_to_hostname.csv', newline='') as csvfile:
     csvreader = csv.reader(csvfile, delimiter=',', quotechar='"')
     headers = next(csvreader)
     headers.append('VRF')
+    headers.append('Hostname')
     csvout.writerow(headers)
     for row in csvreader:
         ip = row[1]
+        hostname = ''
+        try:
+            hostname = (socket.gethostbyaddr(ip))[0]
+        except:
+            hostname = 'NotFound'
         row.append(iptovrf(ip))
+        row.append(hostname)
         csvout.writerow(row)
